@@ -10,6 +10,7 @@ from docx.shared import Inches
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import os
+
 plt.style.use('seaborn-paper')
 
 '''
@@ -32,9 +33,8 @@ def getNumber(last, first):
 def dataGrab(number, start, end):
     data = statcast_pitcher(start_dt=start, end_dt=end,
                             player_id=number)
-    data = data[['pitch_type', 'release_speed', 'effective_speed',
-                 'release_pos_x', 'release_pos_z', 'plate_x', 'plate_z',
-                 'pfx_x', 'pfx_z', 'release_spin_rate', 'zone', 'p_throws',
+    data = data[['pitch_type', 'release_speed', 'release_pos_x', 'release_pos_z',
+                 'pfx_x', 'pfx_z', 'release_spin_rate',
                  'estimated_woba_using_speedangle', 'woba_value', 'description']]
     data.index = range(len(data['pitch_type']))
     return data
@@ -59,13 +59,15 @@ def plotData(data):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
         label = pitch_types[i]
-        ax0.scatter(selected_data['release_pos_x'], selected_data['release_pos_z'],
-                    label=label, s=20, alpha=0.5)
-        ax2.scatter(12*selected_data['pfx_x'], 12*selected_data['pfx_z'],
-                    label=label, s=20, alpha=0.5)
-
-    ax0.set_xlim(data['release_pos_x'].min()-1, data['release_pos_x'].max()+1)
-    ax0.set_ylim(data['release_pos_z'].min()-1, data['release_pos_z'].max()+1)
+        if(label != 'PO'):
+            ax0.scatter(selected_data['release_pos_x'], selected_data['release_pos_z'],
+                        label=label, s=20, alpha=0.5)
+            ax2.scatter(12*selected_data['pfx_x'], 12*selected_data['pfx_z'],
+                        label=label, s=20, alpha=0.5)
+        else:
+            continue
+    ax0.set_xlim(data['release_pos_x'].mean()-1.5, data['release_pos_x'].mean()+1.5)
+    ax0.set_ylim(data['release_pos_z'].mean()-1.5, data['release_pos_z'].mean()+1.5)
     ax0.set_title('Release Position')
     ax0.set_xlabel('Horizontal Release Point')
     ax0.set_ylabel('Vertical Release Point')
@@ -103,7 +105,7 @@ def getData(data):
         avgSpinRate = round(selected_data['release_spin_rate'].dropna().mean(), 0)
         avgHorzBreak = round(12*selected_data['pfx_x'].dropna().mean(), 1)
         avgVertBreak = round(12*selected_data['pfx_z'].dropna().mean(), 1)
-        #avgBreakDir = round(m.degrees(m.atan2(avgHorzBreak, avgVertBreak)), 0)
+        # avgBreakDir = round(m.degrees(m.atan2(avgHorzBreak, avgVertBreak)), 0)
         estwOBA = round(selected_data['estimated_woba_using_speedangle'].dropna().mean(), 3)
         wOBA = round(selected_data['woba_value'].dropna().mean(), 3)
         swstrperc = round(swstr/count*100, 1)
@@ -115,7 +117,9 @@ def getData(data):
                                              'Velocity (mph)', 'Spin Rate (rpm)',
                                              'Horizontal Break (in)', 'Vertical Break (in)',
                                              'xwOBA', 'wOBA', 'SwStr%'])
+    pitches = pitches[pitches['% Thrown'] >= 1]
     pitches = pitches.sort_values(by=['% Thrown'], ascending=False)
+
     return pitches
 
 
@@ -163,6 +167,64 @@ def GenerateReport(fname, lname, date1, date2, memfile, reportData, count):
     for i in range(reportData.shape[0]):
         for j in range(reportData.shape[-1]):
             t.cell(i+1, j).text = str(reportData.values[i, j])
+
+    pbreak = document.add_paragraph('\n')
+
+    pitchtypes = document.add_paragraph(style='List Bullet')
+    ptstr = 'Pitch Type - FF: Four-Seam Fastball, FT: Two-Seam Fastball, SI: Sinkker, FC: Cutter, FS: Splitter, SL: Slider, CU: Curveball, KC: Knuckle-curve, CH: Changeup, FO: Forkball, SC: Screwball, KN: Knuckleball, EP: Eephus'
+    run = pitchtypes.add_run(ptstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    velo = document.add_paragraph(style='List Bullet')
+    velostr = 'Velocity - recorded in miles per hour at release.'
+    run = velo.add_run(velostr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    spinrate = document.add_paragraph(style='List Bullet')
+    spinstr = 'Spin Rate - recorded in revolutions per minute at release.'
+    run = spinrate.add_run(spinstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    hbreak = document.add_paragraph(style='List Bullet')
+    hbreakstr = 'Horizontal Break - horizontal movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical pitch thrown at the same speed with no spin-induced movement.'
+    run = hbreak.add_run(hbreakstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    vbreak = document.add_paragraph(style='List Bullet')
+    vbreakstr = 'Vertical Break - vertical movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical pitch thrown at the same speed with no spin-induced movement.'
+    run = vbreak.add_run(vbreakstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    xwOBA = document.add_paragraph(style='List Bullet')
+    xwOBAstr = 'xwOBA -  formulated using exit velocity, launch angle and, on certain types of batted balls, Sprint Speed.'
+    run = xwOBA.add_run(xwOBAstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    wOBA = document.add_paragraph(style='List Bullet')
+    wOBAstr = 'wOBA -  a statistic, based on linear weights, designed to measure a player\'s overall offensive contributions per plate appearance.'
+    run = wOBA.add_run(wOBAstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
+
+    swstr = document.add_paragraph(style='List Bullet')
+    swstrstr = 'SwStr% - measures swing and miss rate based on pitch type. EX: (FF Swings and Misses)/(Total # of FF Thrown) * 100.'
+    run = swstr.add_run(swstrstr)
+    font3 = run.font
+    font3.size = Pt(8)
+    font3.name = 'Calibri'
 
     document.save(fname + lname + date2 + '.docx')
     memfile.close()
