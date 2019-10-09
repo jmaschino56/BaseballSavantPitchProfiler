@@ -35,7 +35,7 @@ def dataGrab(number, start, end):
     data = data[['pitch_type', 'release_speed', 'effective_speed',
                  'release_pos_x', 'release_pos_z', 'plate_x', 'plate_z',
                  'pfx_x', 'pfx_z', 'release_spin_rate', 'zone', 'p_throws',
-                 'estimated_woba_using_speedangle', 'woba_value']]
+                 'estimated_woba_using_speedangle', 'woba_value', 'description']]
     data.index = range(len(data['pitch_type']))
     return data
 
@@ -93,23 +93,28 @@ def getData(data):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
         label = pitch_types[i]
+        count = selected_data['pitch_type'].count()
+        swstr = selected_data[selected_data['description'] == 'swinging_strike'].count()[
+            'description']
         percentage_used = round(
-            (selected_data['pitch_type'].count()/data['pitch_type'].count()) * 100, 1)
+            (count/data['pitch_type'].count()) * 100, 1)
+
         avgVelo = round(selected_data['release_speed'].dropna().mean(), 1)
         avgSpinRate = round(selected_data['release_spin_rate'].dropna().mean(), 0)
         avgHorzBreak = round(12*selected_data['pfx_x'].dropna().mean(), 1)
         avgVertBreak = round(12*selected_data['pfx_z'].dropna().mean(), 1)
-        avgSpinDir = round(m.degrees(m.atan2(avgHorzBreak, avgVertBreak)), 0)
+        #avgBreakDir = round(m.degrees(m.atan2(avgHorzBreak, avgVertBreak)), 0)
         estwOBA = round(selected_data['estimated_woba_using_speedangle'].dropna().mean(), 3)
         wOBA = round(selected_data['woba_value'].dropna().mean(), 3)
+        swstrperc = round(swstr/count*100, 1)
 
         pitch = [label, percentage_used, avgVelo, avgSpinRate, avgHorzBreak,
-                 avgVertBreak, avgSpinDir, estwOBA, wOBA]
+                 avgVertBreak, estwOBA, wOBA, swstrperc]
         pitches.append(pitch)
     pitches = pd.DataFrame(pitches, columns=['Pitch Type', '% Thrown',
                                              'Velocity (mph)', 'Spin Rate (rpm)',
                                              'Horizontal Break (in)', 'Vertical Break (in)',
-                                             'Spin Direction (deg)', 'xwOBA', 'wOBA'])
+                                             'xwOBA', 'wOBA', 'SwStr%'])
     pitches = pitches.sort_values(by=['% Thrown'], ascending=False)
     return pitches
 
@@ -120,7 +125,7 @@ def GenerateReport(fname, lname, date1, date2, memfile, reportData, count):
     paragraph = document.add_paragraph()
     paragraph_format = paragraph.paragraph_format
     paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    titlestr = 'Aresenal Report for ' + fname + ' ' + lname
+    titlestr = 'Arsenal Report for ' + fname + ' ' + lname
     datestr = '\n' + date1 + ' to ' + date2
     run0 = paragraph.add_run(titlestr)
     run1 = paragraph.add_run(datestr)
