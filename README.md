@@ -8,4 +8,4 @@ Provides an in-depth view at a pitcher's arsenal. It uses python libraries: MatP
   xwOBA,
   wOBA,
   and SwStr%.
-Delivered in a docx word document labeled <fname><lname><date2>.docx
+Delivered in a docx word document.
