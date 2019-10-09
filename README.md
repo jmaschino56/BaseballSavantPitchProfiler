@@ -5,7 +5,7 @@ Provides an in-depth view at a pitcher's arsenal. It uses python libraries: MatP
   Spin Rate (rpm), 
   Horzontal Break (in), 
   Vertical Break (in), 
-  Spin Direction (deg), 
-  xwOBA, and
-  wOBA. 
+  xwOBA,
+  wOBA,
+  and SwStr%.
 Delivered in a docx word document labeled <fname><lname><date2>.docx
