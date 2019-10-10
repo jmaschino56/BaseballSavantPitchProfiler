@@ -49,6 +49,39 @@ def getPitchTypes(data):
     return pitch_types
 
 
+def colorPicker(pitch_type):
+    color = ''
+    if(pitch_type == 'FF'):
+        color = '#8C1C13'
+    elif(pitch_type == 'FT'):
+        color = '#CC5803'
+    elif(pitch_type == 'FT'):
+        color = '#FE7F2D'
+    elif(pitch_type == 'FC'):
+        color = '#E08E45'
+    elif(pitch_type == 'FS'):
+        color = '#F3CA4C'
+    elif(pitch_type == 'SL'):
+        color = '#274060'
+    elif(pitch_type == 'CU'):
+        color = '#4EA5D9'
+    elif(pitch_type == 'KC'):
+        color = '#5BC0EE'
+    elif(pitch_type == 'CH'):
+        color = '#1446A0'
+    elif(pitch_type == 'KN'):
+        color = '#712F79'
+    elif(pitch_type == 'FO'):
+        color = '#03B5AA'
+    elif(pitch_type == 'EP'):
+        color = '#DBFE97'
+    elif(pitch_type == 'SC'):
+        color = '#5B9279'
+    else:
+        color = 'black'
+    return color
+
+
 def plotData(data):
     pitch_types = getPitchTypes(data)
     gs = gridspec.GridSpec(2, 2)
@@ -59,13 +92,14 @@ def plotData(data):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
         label = pitch_types[i]
-        if(label != 'PO'):
-            ax0.scatter(selected_data['release_pos_x'], selected_data['release_pos_z'],
-                        label=label, s=20, alpha=0.5)
-            ax2.scatter(12*selected_data['pfx_x'], 12*selected_data['pfx_z'],
-                        label=label, s=20, alpha=0.5)
-        else:
+        color = colorPicker(label)
+        if(label == 'PO' or label == 'IB' or label == 'AB' or label == 'UN'):
             continue
+        else:
+            ax0.scatter(selected_data['release_pos_x'], selected_data['release_pos_z'],
+                        label=label, s=20, alpha=0.5, c=color)
+            ax2.scatter(12*selected_data['pfx_x'], 12*selected_data['pfx_z'],
+                        label=label, s=20, alpha=0.5, c=color)
     ax0.set_xlim(data['release_pos_x'].mean()-1.5, data['release_pos_x'].mean()+1.5)
     ax0.set_ylim(data['release_pos_z'].mean()-1.5, data['release_pos_z'].mean()+1.5)
     ax0.set_title('Release Position')
