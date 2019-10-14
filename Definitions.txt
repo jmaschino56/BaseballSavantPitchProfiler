@@ -1,0 +1,8 @@
+•	Pitch Type - FF: Four-Seam Fastball, FT: Two-Seam Fastball, SI: Sinkker, FC: Cutter, FS: Splitter, SL: Slider, CU: Curveball, KC: 	Knuckle-curve, CH: Changeup, FO: Forkball, SC: Screwball, KN: Knuckleball, EP: Eephus
+•	Velocity - recorded in miles per hour at release.
+•	Spin Rate - recorded in revolutions per minute at release.
+•	Horizontal Break - horizontal movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical 	pitch thrown at the same speed with no spin-induced movement.
+•	Vertical Break - vertical movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical pitch 	thrown at the same speed with no spin-induced movement.
+•	xwOBA -  formulated using exit velocity, launch angle and, on certain types of batted balls, Sprint Speed.
+•	wOBA -  a statistic, based on linear weights, designed to measure a player's overall offensive contributions per plate appearance.
+•	SwStr% - measures swing and miss rate based on pitch type. EX: (FF Swings and Misses)/(Total # of FF Thrown) * 100.
