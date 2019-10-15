@@ -6,3 +6,12 @@
 •	xwOBA -  formulated using exit velocity, launch angle and, on certain types of batted balls, Sprint Speed.
 •	wOBA -  a statistic, based on linear weights, designed to measure a player's overall offensive contributions per plate appearance.
 •	SwStr% - measures swing and miss rate based on pitch type. EX: (FF Swings and Misses)/(Total # of FF Thrown) * 100.
+•	Weak% - Weak contact % on batted balls.
+•	Topped% - Topped Ball % on batted balls.
+•	Under% - Under the ball % on batted balls.
+•	Burner% - Burner and flare % on batted balls. Shorted from Flare/Burner% to fit in table. 
+•	Solid% - Solid contact % on batted balls.
+•	Barrel% - Barreled ball % on batted balls.
+•	HardHit% - % of batted balls with an exit velocity of 95 mph or greater.
+
+Weak% to Barrel% can be found at https://baseballsavant.mlb.com/csv-docs under 'launch speed angle'
