@@ -5,7 +5,7 @@
 •	Vertical Break - vertical movement, in inches, of the pitch between the release point and home plate, as compared to a theoretical pitch 	thrown at the same speed with no spin-induced movement.
 •	xwOBA -  formulated using exit velocity, launch angle and, on certain types of batted balls, Sprint Speed.
 •	wOBA -  a statistic, based on linear weights, designed to measure a player's overall offensive contributions per plate appearance.
-•	SwStr% - measures swing and miss rate based on pitch type. EX: (FF Swings and Misses)/(Total # of FF Thrown) * 100.
+•	Wiff Rate - measures swing and miss rate compared to total swings based on pitch type. EX: (FF Swings and Misses)/(Total # of Swings and misses from FF) * 100.
 •	Weak% - Weak contact % on batted balls.
 •	Topped% - Topped Ball % on batted balls.
 •	Under% - Under the ball % on batted balls.
