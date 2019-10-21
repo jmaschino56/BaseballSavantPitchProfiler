@@ -3,7 +3,7 @@ from pybaseball import statcast_pitcher
 from pybaseball import playerid_lookup
 import matplotlib.pylab as plt
 import matplotlib.gridspec as gridspec
-import math as m
+import math as math
 from pandas.compat import BytesIO
 from docx import Document
 from docx.shared import Inches
@@ -14,12 +14,11 @@ import os
 
 plt.style.use('seaborn-paper')
 
-'''
+
 # used for debugging
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('max_colwidth', -1)
-'''
 
 
 def getNumber(last, first):
@@ -38,9 +37,122 @@ def dataGrab(number, start, end):
                  'pfx_x', 'pfx_z', 'release_spin_rate', 'plate_x', 'plate_z',
                  'estimated_woba_using_speedangle', 'woba_value', 'description',
                  'launch_speed_angle', 'launch_angle', 'launch_speed', 'bb_type',
-                 'effective_speed']]
+                 'effective_speed', 'vx0', 'vy0', 'vz0', 'ax', 'ay', 'az',
+                 'release_extension']]
     data.index = range(len(data['pitch_type']))
     return data
+
+
+def calculate_pitches(pitches):
+    # constants
+    g_fts = 32.174
+    R_ball = .121
+    mass = 5.125
+    circ = 9.125
+    temp = 72
+    humidity = 50
+    pressure = 29.92
+    temp_c = (5/9)*(temp-32)
+    pressure_mm = (pressure * 1000) / 39.37
+    svp = 4.5841 * math.exp((18.687 - temp_c/234.5) * temp_c/(257.14 + temp_c))
+    rho = (1.2929 * (273 / (temp_c + 273)) * (pressure_mm - .3783 *
+                                              humidity * svp / 100) / 760) * .06261
+    const = 0.07182 * rho * (5.125 / mass) * (circ / 9.125)**2
+
+    # add row to put calculations in
+    pitches['InducedHorzBreak'] = np.nan
+    pitches['InducedVertBreak'] = np.nan
+    pitches['Tilt'] = np.nan
+    pitches['SpinEff'] = np.nan
+    lol = 0
+    for i in range(len(pitches.pitch_type)):
+        # x0 = -1 * pitches.x0.iloc[i]
+        v0 = pitches.release_speed.iloc[i]
+        vx0 = pitches.vx0.iloc[i]
+        ax = pitches.ax.iloc[i]
+        vy0 = pitches.vy0.iloc[i]
+        ay = pitches.ay.iloc[i]
+        vz0 = pitches.vz0.iloc[i]
+        az = pitches.az.iloc[i]
+        pfx_x = pitches.pfx_x.iloc[i]
+        pfx_z = pitches.pfx_z.iloc[i]
+        plate_x = pitches.plate_x.iloc[i]
+        plate_z = pitches.plate_z.iloc[i]
+        release_x = pitches.release_pos_x.iloc[i]
+        release_y = 60.5-pitches.release_extension.iloc[i]
+        release_z = pitches.release_pos_z.iloc[i]
+        spin_rate = pitches.release_spin_rate.iloc[i]
+
+        # time between release and y0 measurement
+        t_back_to_release = (-vy0-math.sqrt(vy0**2-2*ay*(50-release_y)))/ay
+
+        # adjust velocity at y0 to be at release
+        vx_r = vx0+ax*t_back_to_release
+        vy_r = vy0+ay*t_back_to_release
+        vz_r = vz0+az*t_back_to_release
+        dv0 = v0 - math.sqrt(vx_r**2 + vy_r**2 + vz_r**2)/1.467
+
+        # calculate pitch time also know as tf in Template
+        t_c = (-vy_r - math.sqrt(vy_r**2 - 2*ay*(release_y - 17/12))) / ay
+
+        # calcualte x and z movement
+        calc_x_mvt = (plate_x-release_x-(vx_r/vy_r)*(17/12-release_y))
+        calc_z_mvt = (plate_z-release_z-(vz_r/vy_r)*(17/12-release_y))+0.5*g_fts*t_c**2
+
+        # average velocity
+        vx_bar = (2 * vx_r + ax * t_c) / 2
+        vy_bar = (2 * vy_r + ay * t_c) / 2
+        vz_bar = (2 * vz_r + az * t_c) / 2
+        v_bar = math.sqrt(vx_bar**2 + vy_bar**2 + vz_bar**2)
+
+        # drag acceleration
+        adrag = -(ax * vx_bar + ay * vy_bar + (az + g_fts) * vz_bar)/v_bar
+
+        # magnus acceleration
+        amagx = ax + adrag * vx_bar/v_bar
+        amagy = ay + adrag * vy_bar/v_bar
+        amagz = az + adrag * vz_bar/v_bar + g_fts
+        amag = math.sqrt(amagx**2 + amagy**2 + amagz**2)
+
+        # movement components
+        mx = .5 * amagx * (t_c**2)*12
+        mz = .5 * amagz * (t_c**2)*12
+
+        # drag/lift coefficients may need work
+        Cd = adrag / (v_bar**2 * const)
+        Cl = amag / (v_bar**2 * const)
+
+        s = 0.4*Cl/(1-2.32*Cl)
+        spin_t = 78.92*s*v_bar
+
+        '''
+        # for debugging purposes
+        spin_tx = spin_t*(vy_bar*amagz-vz_bar*amagy)/(amag*v_bar)
+        spin_ty = spin_t*(vz_bar*amagx-vx_bar*amagz)/(amag*v_bar)
+        spin_tz = spin_t*(vx_bar*amagy-vy_bar*amagx)/(amag*v_bar)
+        spin_check = math.sqrt(spin_tx**2+spin_ty**2+spin_tz**2)-spin_t
+        '''
+        # calc spin direction
+        phi = 0
+        if(amagz > 0):
+            phi = math.atan2(amagz, amagx) * 180/math.pi
+        else:
+            phi = 360+math.atan2(amagz, amagx)*180/math.pi
+        phi = phi+90
+        spin_dir = abs(phi-180)
+        dec_time = 3-(1/30)*spin_dir
+        if(dec_time <= 0):
+            dec_time += 12
+
+        # calc spin eff
+        spin_eff = spin_t/spin_rate
+        pd.set_option('mode.chained_assignment', None)
+        pitches.InducedHorzBreak.iloc[i] = -calc_x_mvt
+        pitches.InducedVertBreak.iloc[i] = calc_z_mvt
+        pitches.Tilt.iloc[i] = dec_time
+        pitches.SpinEff.iloc[i] = spin_eff
+
+    return pitches
 
 
 def getPitchTypes(data):
@@ -99,11 +211,11 @@ def plotData(data):
         if(label == 'PO' or label == 'IB' or label == 'AB' or label == 'UN' or label == 'EP'):
             continue
         else:
-            ax0.scatter(selected_data['release_pos_x'], selected_data['release_pos_z'],
+            ax0.scatter(-selected_data['release_pos_x'], selected_data['release_pos_z'],
                         label=label, s=20, alpha=0.5, c=color)
-            ax2.scatter(12*selected_data['pfx_x'], 12*selected_data['pfx_z'],
+            ax2.scatter(12*selected_data['InducedHorzBreak'], 12*selected_data['InducedVertBreak'],
                         label=label, s=20, alpha=0.5, c=color)
-    ax0.set_xlim(data['release_pos_x'].mean()-1.5, data['release_pos_x'].mean()+1.5)
+    ax0.set_xlim(-data['release_pos_x'].mean()-1.5, -data['release_pos_x'].mean()+1.5)
     ax0.set_ylim(data['release_pos_z'].mean()-1.5, data['release_pos_z'].mean()+1.5)
     ax0.set_title('Release Position')
     ax0.set_xlabel('Horizontal Release Point')
@@ -112,7 +224,7 @@ def plotData(data):
     ax2.set_ylim(-30, 30)
     ax2.axhline(y=0, color='k')
     ax2.axvline(x=0, color='k')
-    ax2.set_title('Pitch Movement')
+    ax2.set_title('Pitch Movement (Pitcher\'s View)')
     ax2.set_xlabel('Horizontal Movement')
     ax2.set_ylabel('Vertical Movement')
     ax0.legend(prop={'size': 7})
@@ -145,7 +257,7 @@ def plotLocationData(data):
         sz_x = [.79, .79, -.79, -.79, .79]
         sz_z = [3.5, 1.5, 1.5, 3.5, 3.5]
         xedges, zedges = np.linspace(-2, 2, 20), np.linspace(-0.5, 4.5, 20)
-        x = selected_data['plate_x']
+        x = -1*selected_data['plate_x']
         z = selected_data['plate_z']
         hist, xedges, yedges = np.histogram2d(x, z, (xedges, zedges))
         xidx = np.clip(np.digitize(x, xedges), 0, hist.shape[0]-1)
@@ -200,12 +312,24 @@ def plotLocationData(data):
     ax6.set_ylim(-0.5, 4.5)
     ax6.axis('off')
     ax6.set_title('FS', fontsize=10)
-    fig.suptitle('Pitch Locations (Catcher\'s View)')
+    fig.suptitle('Pitch Locations (Pitcher\'s View)')
     fig.subplots_adjust(top=.60, wspace=0.0, bottom=.0, left=.00, right=1)
     memfile = BytesIO()
     plt.savefig(memfile)
     # plt.show() for debug
     return memfile
+
+
+def convert_to_time(dec_time):
+    if(math.isnan(dec_time)):
+        time = ''
+    else:
+        hours = int(dec_time)
+        if(hours == 0):
+            hours = 12
+        minutes = int((dec_time*60) % 60)
+        time = str(hours) + ':' + str(minutes)
+    return time
 
 
 def getData(data):
@@ -227,14 +351,12 @@ def getData(data):
         percentage_used = round(
             (count/data['pitch_type'].count()) * 100, 1)
         avgVelo = round(selected_data['release_speed'].dropna().mean(), 1)
-        avgEffVelo = round(selected_data['effective_speed'].dropna().mean(), 1)
         avgSpinRate = round(selected_data['release_spin_rate'].dropna().mean(), 0)
-        avgHorzBreak = round(12*selected_data['pfx_x'].dropna().mean(), 1)
-        avgVertBreak = round(12*selected_data['pfx_z'].dropna().mean(), 1)
-        swstrperc = round(swm/total_swings*100, 1)
-        # avgBreakDir = round(m.degrees(m.atan2(avgHorzBreak, avgVertBreak)), 0)
-        estwOBA = round(selected_data['estimated_woba_using_speedangle'].dropna().mean(), 3)
-        wOBA = round(selected_data['woba_value'].dropna().mean(), 3)
+        avgHorzBreak = round(12*selected_data['InducedHorzBreak'].dropna().mean(), 1)
+        avgVertBreak = round(12*selected_data['InducedVertBreak'].dropna().mean(), 1)
+        whiff_rate = round(swm/total_swings*100, 1)
+        bauer_units = (round(avgSpinRate/avgVelo, 0))
+        spin_eff = round(selected_data['SpinEff'].dropna().mean()*100, 1)
 
         # batted ball stuff
         bbe = selected_data['launch_speed_angle'].dropna().count()
@@ -254,15 +376,15 @@ def getData(data):
             'launch_speed_angle']/bbe*100, 1)
 
         pitch = [label, percentage_used, avgVelo, avgSpinRate,
-                 avgHorzBreak, avgVertBreak, swstrperc, estwOBA, wOBA]
+                 avgHorzBreak, avgVertBreak, bauer_units, spin_eff, whiff_rate]
         bbs = [label, percentage_used, weak, topped, under, flare, solid,
                barrels, hardhit]
         pitches.append(pitch)
         battedball.append(bbs)
     pitches = pd.DataFrame(pitches, columns=['Pitch Type', '% Thrown', 'Velocity',
                                              'Spin Rate', 'Horizontal Break',
-                                             'Vertical Break', 'Whiff Rate', 'xwOBA',
-                                             'wOBA'])
+                                             'Vertical Break', 'Bauer Units', 'Spin Eff.',
+                                             'Whiff Rate'])
     battedball = pd.DataFrame(battedball, columns=['Pitch Type', '% Thrown',
                                                    'Weak%', 'Topped%', 'Under%',
                                                    'Burner%', 'Solid%',
@@ -345,6 +467,7 @@ def main():
         date1 = input('Enter Start of Date Range (YYYY-MM-DD): ')
         date2 = input('Enter End of Date Range (YYYY-MM-DD): ')
         data = dataGrab(getNumber(lname, fname), date1, date2)
+        data = calculate_pitches(data)
         pitchdata, battedballdata = getData(data)
         releasemovement = plotData(data)
         locations = plotLocationData(data)
