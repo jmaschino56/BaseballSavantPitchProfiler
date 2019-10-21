@@ -21,7 +21,7 @@ pd.set_option('display.expand_frame_repr', False)
 pd.set_option('max_colwidth', -1)
 
 
-def getNumber(last, first):
+def get_number(last, first):
     playerTable = playerid_lookup(last, first)
     playerTable = playerTable.loc[playerTable['mlb_played_last'].isin([2019])]
     playerTable.index = range(len(playerTable['mlb_played_last']))
@@ -30,7 +30,7 @@ def getNumber(last, first):
     return number
 
 
-def dataGrab(number, start, end):
+def import_data(number, start, end):
     data = statcast_pitcher(start_dt=start, end_dt=end,
                             player_id=number)
     data = data[['pitch_type', 'release_speed', 'release_pos_x', 'release_pos_z',
@@ -43,7 +43,7 @@ def dataGrab(number, start, end):
     return data
 
 
-def calculate_pitches(pitches):
+def nathan_calculations(pitches):
     # constants
     g_fts = 32.174
     R_ball = .121
@@ -135,12 +135,10 @@ def calculate_pitches(pitches):
         # calc spin direction
         phi = 0
         if(amagz > 0):
-            phi = math.atan2(amagz, amagx) * 180/math.pi
+            phi = math.atan2(amagz, -amagx) * 180/math.pi
         else:
-            phi = 360+math.atan2(amagz, amagx)*180/math.pi
-        phi = phi+90
-        spin_dir = abs(phi-180)
-        dec_time = 3-(1/30)*spin_dir
+            phi = 360+math.atan2(amagz, -amagx)*180/math.pi
+        dec_time = 3-(1/30)*phi
         if(dec_time <= 0):
             dec_time += 12
 
@@ -155,7 +153,7 @@ def calculate_pitches(pitches):
     return pitches
 
 
-def getPitchTypes(data):
+def get_pitch_types(data):
     pitchcounts = data['pitch_type'].value_counts(dropna=True)
     pitch_types = []
     for i in range(len(pitchcounts)):
@@ -164,7 +162,7 @@ def getPitchTypes(data):
     return pitch_types
 
 
-def colorPicker(pitch_type):
+def color_picker(pitch_type):
     color = ''
     if(pitch_type == 'FF'):
         color = '#8C1C13'
@@ -197,8 +195,8 @@ def colorPicker(pitch_type):
     return color
 
 
-def plotData(data):
-    pitch_types = getPitchTypes(data)
+def plot_release_movement(data):
+    pitch_types = get_pitch_types(data)
     gs = gridspec.GridSpec(2, 2)
     fig = plt.figure(figsize=(6, 2.5))
     ax0 = plt.subplot(gs[:, 0])  # release
@@ -207,7 +205,7 @@ def plotData(data):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
         label = pitch_types[i]
-        color = colorPicker(label)
+        color = color_picker(label)
         if(label == 'PO' or label == 'IB' or label == 'AB' or label == 'UN' or label == 'EP'):
             continue
         else:
@@ -217,7 +215,7 @@ def plotData(data):
                         label=label, s=20, alpha=0.5, c=color)
     ax0.set_xlim(-data['release_pos_x'].mean()-1.5, -data['release_pos_x'].mean()+1.5)
     ax0.set_ylim(data['release_pos_z'].mean()-1.5, data['release_pos_z'].mean()+1.5)
-    ax0.set_title('Release Position')
+    ax0.set_title('Release Position (Pitchers View)')
     ax0.set_xlabel('Horizontal Release Point')
     ax0.set_ylabel('Vertical Release Point')
     ax2.set_xlim(-30, 30)
@@ -237,8 +235,8 @@ def plotData(data):
     return memfile
 
 
-def plotLocationData(data):
-    pitch_types = getPitchTypes(data)
+def plot_location(data):
+    pitch_types = get_pitch_types(data)
     gs = gridspec.GridSpec(1, 7)
     fig = plt.figure(figsize=(6, 1.5))
     ax0 = plt.subplot(gs[:, 0])  # FF
@@ -253,7 +251,7 @@ def plotLocationData(data):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
         label = pitch_types[i]
-        # color = colorPicker(label)
+        # color = color_picker(label)
         sz_x = [.79, .79, -.79, -.79, .79]
         sz_z = [3.5, 1.5, 1.5, 3.5, 3.5]
         xedges, zedges = np.linspace(-2, 2, 20), np.linspace(-0.5, 4.5, 20)
@@ -328,12 +326,15 @@ def convert_to_time(dec_time):
         if(hours == 0):
             hours = 12
         minutes = int((dec_time*60) % 60)
-        time = str(hours) + ':' + str(minutes)
+        minutestr = str(minutes)
+        if(len(minutestr) < 2):
+            minutestr = '0' + minutestr
+        time = str(hours) + ':' + minutestr
     return time
 
 
-def getData(data):
-    pitch_types = getPitchTypes(data)
+def transform_data(data):
+    pitch_types = get_pitch_types(data)
     pitches = []
     battedball = []
     for i in range(len(pitch_types)):
@@ -355,7 +356,8 @@ def getData(data):
         avgHorzBreak = round(12*selected_data['InducedHorzBreak'].dropna().mean(), 1)
         avgVertBreak = round(12*selected_data['InducedVertBreak'].dropna().mean(), 1)
         whiff_rate = round(swm/total_swings*100, 1)
-        bauer_units = (round(avgSpinRate/avgVelo, 0))
+        #bauer_units = (round(avgSpinRate/avgVelo, 0))
+        tilt = convert_to_time(selected_data['Tilt'].dropna().mean())
         spin_eff = round(selected_data['SpinEff'].dropna().mean()*100, 1)
 
         # batted ball stuff
@@ -376,14 +378,14 @@ def getData(data):
             'launch_speed_angle']/bbe*100, 1)
 
         pitch = [label, percentage_used, avgVelo, avgSpinRate,
-                 avgHorzBreak, avgVertBreak, bauer_units, spin_eff, whiff_rate]
+                 avgHorzBreak, avgVertBreak, tilt, spin_eff, whiff_rate]
         bbs = [label, percentage_used, weak, topped, under, flare, solid,
                barrels, hardhit]
         pitches.append(pitch)
         battedball.append(bbs)
     pitches = pd.DataFrame(pitches, columns=['Pitch Type', '% Thrown', 'Velocity',
                                              'Spin Rate', 'Horizontal Break',
-                                             'Vertical Break', 'Bauer Units', 'Spin Eff.',
+                                             'Vertical Break', 'Tilt', 'Spin Eff.',
                                              'Whiff Rate'])
     battedball = pd.DataFrame(battedball, columns=['Pitch Type', '% Thrown',
                                                    'Weak%', 'Topped%', 'Under%',
@@ -397,7 +399,7 @@ def getData(data):
     return pitches, battedball
 
 
-def GenerateProfile(fname, lname, date1, date2, moves, locs, pitches, battedballs, count):
+def generate_profile(fname, lname, date1, date2, moves, locs, pitches, battedballs, count):
     document = Document()
 
     paragraph = document.add_paragraph()
@@ -466,20 +468,21 @@ def main():
         lname = input('Enter Last Name: ')
         date1 = input('Enter Start of Date Range (YYYY-MM-DD): ')
         date2 = input('Enter End of Date Range (YYYY-MM-DD): ')
-        data = dataGrab(getNumber(lname, fname), date1, date2)
-        data = calculate_pitches(data)
-        pitchdata, battedballdata = getData(data)
-        releasemovement = plotData(data)
-        locations = plotLocationData(data)
-        pitches = getPitchTypes(data)
+        data = import_data(get_number(lname, fname), date1, date2)
+        data = nathan_calculations(data)
+        pitchdata, battedballdata = transform_data(data)
+        releasemovement = plot_release_movement(data)
+        locations = plot_location(data)
+        pitches = get_pitch_types(data)
         count = 0
         for i in range(len(pitches)):
             count += 1
-        GenerateProfile(fname, lname, date1, date2, releasemovement,
-                        locations, pitchdata, battedballdata, count)
+
+        generate_profile(fname, lname, date1, date2, releasemovement,
+                         locations, pitchdata, battedballdata, count)
+
         unused_variable = os.system("cls")
         print('Pitch Profile for: ' + fname + lname + date2 + '.docx Created!')
-
         dec = input('Enter New Pitcher (Y/N)?: ').upper()
         if(dec == 'N'):
             break
