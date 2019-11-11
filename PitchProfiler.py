@@ -204,15 +204,23 @@ def plot_release_movement(data):
     for i in range(len(pitch_types)):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
+        pitch_count = selected_data['pitch_type'].count()
+        total_count = data['pitch_type'].count()
+        percent = round(pitch_count/total_count*100, 1)
         label = pitch_types[i]
-        color = color_picker(label)
-        if(label == 'PO' or label == 'IB' or label == 'AB' or label == 'UN' or label == 'EP'):
+
+        if(percent < 1.5):
             continue
         else:
-            ax0.scatter(-selected_data['release_pos_x'], selected_data['release_pos_z'],
-                        label=label, s=20, alpha=0.5, c=color)
-            ax2.scatter(12*selected_data['InducedHorzBreak'], 12*selected_data['InducedVertBreak'],
-                        label=label, s=20, alpha=0.5, c=color)
+            color = color_picker(label)
+            if(label == 'PO' or label == 'IB' or label == 'AB' or label == 'UN'):
+                continue
+            else:
+                ax0.scatter(-selected_data['release_pos_x'], selected_data['release_pos_z'],
+                            label=label, s=20, alpha=0.5, c=color)
+                ax2.scatter(12*selected_data['InducedHorzBreak'], 12*selected_data['InducedVertBreak'],
+                            label=label, s=20, alpha=0.5, c=color)
+
     ax0.set_xlim(-data['release_pos_x'].mean()-1.5, -data['release_pos_x'].mean()+1.5)
     ax0.set_ylim(data['release_pos_z'].mean()-1.5, data['release_pos_z'].mean()+1.5)
     ax0.set_title('Release Position (Pitchers View)')
@@ -251,37 +259,44 @@ def plot_location(data):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
         label = pitch_types[i]
-        # color = color_picker(label)
-        sz_x = [.79, .79, -.79, -.79, .79]
-        sz_z = [3.5, 1.5, 1.5, 3.5, 3.5]
-        xedges, zedges = np.linspace(-2, 2, 20), np.linspace(-0.5, 4.5, 20)
-        x = -1*selected_data['plate_x']
-        z = selected_data['plate_z']
-        hist, xedges, yedges = np.histogram2d(x, z, (xedges, zedges))
-        xidx = np.clip(np.digitize(x, xedges), 0, hist.shape[0]-1)
-        zidx = np.clip(np.digitize(z, zedges), 0, hist.shape[1]-1)
-        c = hist[xidx, zidx]
-        if(label == 'FF'):
-            ax0.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax0.plot(sz_x, sz_z, color='black', lw=0.5)
-        elif(label == 'FT' or label == 'SI'):
-            ax1.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax1.plot(sz_x, sz_z, color='black', lw=0.5)
-        elif(label == 'FC'):
-            ax2.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax2.plot(sz_x, sz_z, color='black', lw=0.5)
-        elif(label == 'SL'):
-            ax3.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax3.plot(sz_x, sz_z, color='black', lw=0.5)
-        elif(label == 'CU' or label == 'KC'):
-            ax4.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax4.plot(sz_x, sz_z, color='black', lw=0.5)
-        elif(label == 'CH'):
-            ax5.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax5.plot(sz_x, sz_z, color='black', lw=0.5)
-        elif(label == 'FS'):
-            ax6.scatter(x, z, c=c, s=1, cmap='YlOrRd')
-            ax6.plot(sz_x, sz_z, color='black', lw=0.5)
+        pitch_count = selected_data['pitch_type'].count()
+        total_count = data['pitch_type'].count()
+        percent = round(pitch_count/total_count*100, 1)
+        label = pitch_types[i]
+        if(percent < 1.5):
+            continue
+        else:
+            sz_x = [.79, .79, -.79, -.79, .79]
+            sz_z = [3.5, 1.5, 1.5, 3.5, 3.5]
+            xedges, zedges = np.linspace(-2, 2, 20), np.linspace(-0.5, 4.5, 20)
+            x = -1*selected_data['plate_x']
+            z = selected_data['plate_z']
+            hist, xedges, yedges = np.histogram2d(x, z, (xedges, zedges))
+            xidx = np.clip(np.digitize(x, xedges), 0, hist.shape[0]-1)
+            zidx = np.clip(np.digitize(z, zedges), 0, hist.shape[1]-1)
+            c = hist[xidx, zidx]
+            if(label == 'FF'):
+                ax0.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax0.plot(sz_x, sz_z, color='black', lw=0.5)
+            elif(label == 'FT' or label == 'SI'):
+                ax1.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax1.plot(sz_x, sz_z, color='black', lw=0.5)
+            elif(label == 'FC'):
+                ax2.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax2.plot(sz_x, sz_z, color='black', lw=0.5)
+            elif(label == 'SL'):
+                ax3.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax3.plot(sz_x, sz_z, color='black', lw=0.5)
+            elif(label == 'CU' or label == 'KC'):
+                ax4.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax4.plot(sz_x, sz_z, color='black', lw=0.5)
+            elif(label == 'CH'):
+                ax5.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax5.plot(sz_x, sz_z, color='black', lw=0.5)
+            elif(label == 'FS'):
+                ax6.scatter(x, z, c=c, s=1, cmap='YlOrRd')
+                ax6.plot(sz_x, sz_z, color='black', lw=0.5)
+
     ax0.set_xlim(-2, 2)
     ax0.set_ylim(-0.5, 4.5)
     ax0.axis('off')
@@ -318,14 +333,25 @@ def plot_location(data):
     return memfile
 
 
+# rounds to nearest 15 minutes
+def time_round(x, base=15):
+    return base * round(x/base)
+
+
 def convert_to_time(dec_time):
     if(math.isnan(dec_time)):
         time = ''
     else:
         hours = int(dec_time)
+        minutes = int((dec_time*60) % 60)
+        minutes = time_round(minutes)
+        if(minutes == 60):
+            hours += 1
+            minutes = 0
         if(hours == 0):
             hours = 12
-        minutes = int((dec_time*60) % 60)
+        elif(hours > 12):
+            hours = hours - 12
         minutestr = str(minutes)
         if(len(minutestr) < 2):
             minutestr = '0' + minutestr
@@ -340,49 +366,52 @@ def transform_data(data):
     for i in range(len(pitch_types)):
         is_pitch = data['pitch_type'] == pitch_types[i]
         selected_data = data[is_pitch]
-        label = pitch_types[i]
         count = selected_data['pitch_type'].count()
-        # pitch info stuff
-        swm = selected_data[selected_data['description'] == 'swinging_strike'].count()[
-            'description']
-        desiredOutcome = ['swinging_strike', 'swinging_strike_blocked', 'foul',
-                          'foul_tip', 'hit_into_play', 'hit_into_play_no_out', 'hit_into_play_score']
-        total_swings = selected_data.loc[selected_data['description'].isin(desiredOutcome)].count()[
-            'description']
-        percentage_used = round(
-            (count/data['pitch_type'].count()) * 100, 1)
-        avgVelo = round(selected_data['release_speed'].dropna().mean(), 1)
-        avgSpinRate = round(selected_data['release_spin_rate'].dropna().mean(), 0)
-        avgHorzBreak = round(12*selected_data['InducedHorzBreak'].dropna().mean(), 1)
-        avgVertBreak = round(12*selected_data['InducedVertBreak'].dropna().mean(), 1)
-        whiff_rate = round(swm/total_swings*100, 1)
-        #bauer_units = (round(avgSpinRate/avgVelo, 0))
-        tilt = convert_to_time(selected_data['Tilt'].dropna().mean())
-        spin_eff = round(selected_data['SpinEff'].dropna().mean()*100, 1)
+        if (count > 0):
+            label = pitch_types[i]
+            # pitch info stuff
+            swm = selected_data[selected_data['description'] == 'swinging_strike'].count()[
+                'description']
+            desiredOutcome = ['swinging_strike', 'swinging_strike_blocked', 'foul',
+                              'foul_tip', 'hit_into_play', 'hit_into_play_no_out', 'hit_into_play_score']
+            total_swings = selected_data.loc[selected_data['description'].isin(desiredOutcome)].count()[
+                'description']
+            percentage_used = round(
+                (count/data['pitch_type'].count()) * 100, 1)
+            avgVelo = round(selected_data['release_speed'].dropna().mean(), 1)
+            avgSpinRate = round(selected_data['release_spin_rate'].dropna().mean(), 0)
+            avgHorzBreak = round(12*selected_data['InducedHorzBreak'].dropna().mean(), 1)
+            avgVertBreak = round(12*selected_data['InducedVertBreak'].dropna().mean(), 1)
+            whiff_rate = round(swm/total_swings*100, 1)
+            #bauer_units = (round(avgSpinRate/avgVelo, 0))
+            tilt = convert_to_time(selected_data['Tilt'].dropna().mean())
+            spin_eff = round(selected_data['SpinEff'].dropna().mean()*100, 1)
 
-        # batted ball stuff
-        bbe = selected_data['launch_speed_angle'].dropna().count()
-        weak = round(selected_data[selected_data['launch_speed_angle'] == 1].count()[
-            'launch_speed_angle']/bbe*100, 1)
-        topped = round(selected_data[selected_data['launch_speed_angle'] == 2].count()[
-            'launch_speed_angle']/bbe*100, 1)
-        under = round(selected_data[selected_data['launch_speed_angle'] == 3].count()[
-            'launch_speed_angle']/bbe*100, 1)
-        flare = round(selected_data[selected_data['launch_speed_angle'] == 4].count()[
-            'launch_speed_angle']/bbe*100, 1)
-        solid = round(selected_data[selected_data['launch_speed_angle'] == 5].count()[
-            'launch_speed_angle']/bbe*100, 1)
-        barrels = round(selected_data[selected_data['launch_speed_angle'] == 6].count()[
-            'launch_speed_angle']/bbe*100, 1)
-        hardhit = round(selected_data[selected_data['launch_speed'] >= 95].count()[
-            'launch_speed_angle']/bbe*100, 1)
+            # batted ball stuff
+            bbe = selected_data['launch_speed_angle'].dropna().count()
+            weak = round(selected_data[selected_data['launch_speed_angle'] == 1].count()[
+                'launch_speed_angle']/bbe*100, 1)
+            topped = round(selected_data[selected_data['launch_speed_angle'] == 2].count()[
+                'launch_speed_angle']/bbe*100, 1)
+            under = round(selected_data[selected_data['launch_speed_angle'] == 3].count()[
+                'launch_speed_angle']/bbe*100, 1)
+            flare = round(selected_data[selected_data['launch_speed_angle'] == 4].count()[
+                'launch_speed_angle']/bbe*100, 1)
+            solid = round(selected_data[selected_data['launch_speed_angle'] == 5].count()[
+                'launch_speed_angle']/bbe*100, 1)
+            barrels = round(selected_data[selected_data['launch_speed_angle'] == 6].count()[
+                'launch_speed_angle']/bbe*100, 1)
+            hardhit = round(selected_data[selected_data['launch_speed'] >= 95].count()[
+                'launch_speed_angle']/bbe*100, 1)
 
-        pitch = [label, percentage_used, avgVelo, avgSpinRate,
-                 avgHorzBreak, avgVertBreak, tilt, spin_eff, whiff_rate]
-        bbs = [label, percentage_used, weak, topped, under, flare, solid,
-               barrels, hardhit]
-        pitches.append(pitch)
-        battedball.append(bbs)
+            pitch = [label, percentage_used, avgVelo, avgSpinRate,
+                     avgHorzBreak, avgVertBreak, tilt, spin_eff, whiff_rate]
+            bbs = [label, percentage_used, weak, topped, under, flare, solid,
+                   barrels, hardhit]
+            pitches.append(pitch)
+            battedball.append(bbs)
+        else:
+            continue
     pitches = pd.DataFrame(pitches, columns=['Pitch Type', '% Thrown', 'Velocity',
                                              'Spin Rate', 'Horizontal Break',
                                              'Vertical Break', 'Tilt', 'Spin Eff.',
